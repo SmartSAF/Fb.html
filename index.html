@@ -4,55 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flipbook PDF</title>
+
   <!-- CSS Flipbook -->
-  <link rel="stylesheet" href="style/style.css">
+  <link rel="stylesheet" href="css/style.css">
   
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Turn.js (pakai file lokal atau CDN) -->
-  <script src="javascript/turn.min.js"></script>
-  <!-- PDF.js (termasuk worker) -->
-  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+  
+  <!-- Turn.js -->
+  <script src="js/turn.min.js"></script>
+
+  <!-- PDF.js (CDN Alternatif jika yang lama error) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  </script>
 </head>
 <body>
-  <!-- Container flipbook -->
   <div id="flipbook"></div>
 
-  <!-- Navigasi -->
-  <div class="navigation-container">
-    <div class="navigation-bar">
-      <div class="slider" id="slider"></div>
-    </div>
-    <div class="page-number" id="pageNumber">Halaman 1</div>
-  </div>
-
-  <!-- Efek Suara -->
-  <audio id="pageSound" src="sounds/page-flip.mp3"></audio>
-
   <script>
-    // Atur PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
-
-    // URL file PDF yang akan dijadikan flipbook
-    const pdfUrl = 'pdf/your-document.pdf';
+    const pdfUrl = 'pdf/your-document.pdf';  // Pastikan file ini ada!
 
     let pdfDoc = null;
     let totalPages = 0;
     const flipbookContainer = document.getElementById('flipbook');
 
-    // Memuat PDF
     pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
       pdfDoc = pdf;
       totalPages = pdf.numPages;
-      
-      // Untuk setiap halaman PDF, buat elemen canvas di dalam div flipbook
+
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        // Buat div untuk halaman
         const pageDiv = document.createElement('div');
         pageDiv.className = 'page';
         pageDiv.setAttribute('data-page-number', pageNum);
 
-        // Buat elemen canvas untuk menampilkan halaman PDF
         const canvas = document.createElement('canvas');
         canvas.className = 'pdf-page';
         pageDiv.appendChild(canvas);
@@ -61,59 +47,27 @@
         renderPage(pageNum, canvas);
       }
 
-      // Inisialisasi Turn.js setelah halaman-halaman PDF dirender
-      $("#flipbook").turn({
-        width: '90%',
-        height: '85vh',
-        autoCenter: true,
-        duration: 1200,
-        gradients: true,
-        display: 'single',
-        when: {
-          turning: function(e, page) {
-            updateSliderPosition(page);
-            playSound();
-          }
-        }
-      });
-
-      // Inisialisasi posisi slider awal
-      updateSliderPosition(1);
+      setTimeout(() => {
+        $("#flipbook").turn({
+          width: 800,
+          height: 600,
+          autoCenter: true,
+          duration: 1200,
+          gradients: true,
+          display: 'double',
+        });
+      }, 2000);
     });
 
-    // Fungsi untuk merender halaman PDF ke canvas
     function renderPage(pageNum, canvas) {
       pdfDoc.getPage(pageNum).then(function(page) {
-        const scale = 1.5; // Atur skala tampilan halaman PDF
+        const scale = 1.5;
         const viewport = page.getViewport({ scale: scale });
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
-        page.render(renderContext);
+        page.render({ canvasContext: context, viewport: viewport });
       });
-    }
-
-    // Fungsi untuk memainkan suara flip
-    function playSound() {
-      const sound = document.getElementById('pageSound');
-      sound.currentTime = 0;
-      sound.play();
-    }
-
-    // Fungsi untuk memperbarui posisi slider dan nomor halaman
-    function updateSliderPosition(page) {
-      const slider = $('#slider');
-      const pageNumber = $('#pageNumber');
-      const barWidth    = $('.navigation-bar').width();
-      const sliderWidth = slider.width();
-      // Menghitung posisi slider berdasarkan halaman aktif
-      const sliderPos = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
-      slider.css('left', sliderPos + 'px');
-      pageNumber.text(`Halaman ${page}`);
     }
   </script>
 </body>
