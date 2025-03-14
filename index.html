@@ -3,25 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flipbook PDF</title>
-
+  <title>Flipbook PDF Interaktif</title>
+  
   <!-- CSS Flipbook -->
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="style/style.css">
   
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   
-  <!-- Turn.js (pakai file lokal atau CDN) -->
-  <script src="js/turn.min.js"></script>
+  <!-- Turn.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4.1.0/turn.min.js"></script>
 
-  <!-- PDF.js dari CDN -->
-  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
-  </script>
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 <body>
-  <!-- Container flipbook -->
+  <h1 style="text-align: center; color: white; background: orange; padding: 10px;">
+    Flipbook PDF Interaktif
+  </h1>
+
+  <!-- Container Flipbook -->
   <div id="flipbook"></div>
 
   <!-- Navigasi -->
@@ -36,86 +37,82 @@
   <audio id="pageSound" src="sounds/page-flip.mp3"></audio>
 
   <script>
-    // URL file PDF yang akan dijadikan flipbook
-    const pdfUrl = 'pdf/your-document.pdf';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
+    const pdfUrl = "pdf/document.pdf";  // Ubah sesuai lokasi file PDF Anda
     let pdfDoc = null;
     let totalPages = 0;
-    const flipbookContainer = document.getElementById('flipbook');
+    const flipbookContainer = document.getElementById("flipbook");
 
-    // Memuat PDF
     pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
       pdfDoc = pdf;
       totalPages = pdf.numPages;
-      
-      // Untuk setiap halaman PDF, buat elemen canvas di dalam div flipbook
+
+      let promises = [];
+
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        // Buat div untuk halaman
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'page';
-        pageDiv.setAttribute('data-page-number', pageNum);
+        let promise = new Promise((resolve) => {
+          const pageDiv = document.createElement("div");
+          pageDiv.className = "page";
 
-        // Buat elemen canvas untuk menampilkan halaman PDF
-        const canvas = document.createElement('canvas');
-        canvas.className = 'pdf-page';
-        pageDiv.appendChild(canvas);
+          const canvas = document.createElement("canvas");
+          canvas.className = "pdf-page";
+          pageDiv.appendChild(canvas);
+          flipbookContainer.appendChild(pageDiv);
 
-        flipbookContainer.appendChild(pageDiv);
-        renderPage(pageNum, canvas);
+          renderPage(pageNum, canvas, resolve);
+        });
+
+        promises.push(promise);
       }
 
-      // Inisialisasi Turn.js setelah halaman-halaman PDF dirender
-      $("#flipbook").turn({
-        width: '90%',
-        height: '85vh',
-        autoCenter: true,
-        duration: 1200,
-        gradients: true,
-        display: 'single',
-        when: {
-          turning: function(e, page) {
-            updateSliderPosition(page);
-            playSound();
+      // Tunggu sampai semua halaman dirender sebelum menginisialisasi flipbook
+      Promise.all(promises).then(() => {
+        $("#flipbook").turn({
+          width: "90%",
+          height: "85vh",
+          autoCenter: true,
+          duration: 1200,
+          gradients: true,
+          display: "single",
+          when: {
+            turning: function (e, page) {
+              updateSliderPosition(page);
+              playSound();
+            }
           }
-        }
-      });
+        });
 
-      // Inisialisasi posisi slider awal
-      updateSliderPosition(1);
+        updateSliderPosition(1);
+      });
     });
 
-    // Fungsi untuk merender halaman PDF ke canvas
-    function renderPage(pageNum, canvas) {
-      pdfDoc.getPage(pageNum).then(function(page) {
-        const scale = 1.5; // Atur skala tampilan halaman PDF
-        const viewport = page.getViewport({ scale: scale });
-        const context = canvas.getContext('2d');
+    function renderPage(pageNum, canvas, callback) {
+      pdfDoc.getPage(pageNum).then(function (page) {
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
+        const context = canvas.getContext("2d");
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
-        page.render(renderContext);
+
+        const renderContext = { canvasContext: context, viewport: viewport };
+        page.render(renderContext).promise.then(callback);
       });
     }
 
-    // Fungsi untuk memainkan suara flip
     function playSound() {
-      const sound = document.getElementById('pageSound');
+      const sound = document.getElementById("pageSound");
       sound.currentTime = 0;
       sound.play();
     }
 
-    // Fungsi untuk memperbarui posisi slider dan nomor halaman
     function updateSliderPosition(page) {
-      const slider = $('#slider');
-      const pageNumber = $('#pageNumber');
-      const barWidth    = $('.navigation-bar').width();
+      const slider = $("#slider");
+      const pageNumber = $("#pageNumber");
+      const barWidth = $(".navigation-bar").width();
       const sliderWidth = slider.width();
-      // Menghitung posisi slider berdasarkan halaman aktif
       const sliderPos = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
-      slider.css('left', sliderPos + 'px');
+      slider.css("left", sliderPos + "px");
       pageNumber.text(`Halaman ${page}`);
     }
   </script>
