@@ -5,28 +5,32 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   height: 100vh;
   background: linear-gradient(135deg, #6a11cb, #ffd700, #2af598);
 }
 
-/* Flipbook */
+/* Container flipbook */
 #flipbook {
   width: 90%;
   height: 85vh;
+  margin-top: 20px;
+}
+
+/* Setiap halaman flipbook */
+.page {
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   display: flex;
   justify-content: center;
   align-items: center;
+  margin: auto;
 }
 
-.page {
-  background-color: white;
-  padding: 20px;
-  text-align: justify;
-  font-size: 18px;
-  line-height: 1.6;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+/* Canvas untuk menampilkan halaman PDF */
+.pdf-page {
+  max-width: 100%;
+  max-height: 100%;
 }
 
 /* Navigasi */
