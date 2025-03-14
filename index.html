@@ -3,46 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flipbook Ebook Bisnis</title>
+  <title>Flipbook PDF</title>
+  <!-- CSS Flipbook -->
   <link rel="stylesheet" href="style/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4.1.1/turn.min.css">
+  
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Turn.js (pakai file lokal atau CDN) -->
+  <script src="javascript/turn.min.js"></script>
+  <!-- PDF.js (termasuk worker) -->
+  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
 </head>
 <body>
-  <!-- Flipbook -->
-  <div id="flipbook">
-    <div class="page">
-      <iframe src="ebook/ebook1.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook2.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook3.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook4.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook5.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook6.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook7.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook8.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook9.html" frameborder="0"></iframe>
-    </div>
-    <div class="page">
-      <iframe src="ebook/ebook10.html" frameborder="0"></iframe>
-    </div>
-  </div>
+  <!-- Container flipbook -->
+  <div id="flipbook"></div>
 
-  <!-- Navigasi Flipbook -->
+  <!-- Navigasi -->
   <div class="navigation-container">
     <div class="navigation-bar">
       <div class="slider" id="slider"></div>
@@ -50,117 +26,95 @@
     <div class="page-number" id="pageNumber">Halaman 1</div>
   </div>
 
-  <!-- Load jQuery dari CDN -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Load Turn.js -->
-  <script src="javascript/turn.min.js"></script>
   <!-- Efek Suara -->
   <audio id="pageSound" src="sounds/page-flip.mp3"></audio>
-  <!-- Script Flipbook -->
-  <script>
-    $(document).ready(function() {
-      const flipbook   = $('#flipbook');
-      const slider     = $('#slider');
-      const pageNumber = $('#pageNumber');
-      const totalPages = 10; // Total halaman flipbook
 
-      // Inisialisasi Turn.js
-      flipbook.turn({
-        width: '100%',
-        height: '80vh',
-        autoCenter: false,
-        duration: 1500, // Durasi animasi flip
-        acceleration: false,
+  <script>
+    // Atur PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+
+    // URL file PDF yang akan dijadikan flipbook
+    const pdfUrl = 'pdf/your-document.pdf';
+
+    let pdfDoc = null;
+    let totalPages = 0;
+    const flipbookContainer = document.getElementById('flipbook');
+
+    // Memuat PDF
+    pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+      pdfDoc = pdf;
+      totalPages = pdf.numPages;
+      
+      // Untuk setiap halaman PDF, buat elemen canvas di dalam div flipbook
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        // Buat div untuk halaman
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        pageDiv.setAttribute('data-page-number', pageNum);
+
+        // Buat elemen canvas untuk menampilkan halaman PDF
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page';
+        pageDiv.appendChild(canvas);
+
+        flipbookContainer.appendChild(pageDiv);
+        renderPage(pageNum, canvas);
+      }
+
+      // Inisialisasi Turn.js setelah halaman-halaman PDF dirender
+      $("#flipbook").turn({
+        width: '90%',
+        height: '85vh',
+        autoCenter: true,
+        duration: 1200,
         gradients: true,
         display: 'single',
         when: {
           turning: function(e, page) {
-            updateSliderPosition(page); // Perbarui posisi slider
-            playSound(); // Memutar suara saat halaman dibalik
+            updateSliderPosition(page);
+            playSound();
           }
         }
       });
 
-      // Fungsi untuk memutar suara
-      function playSound() {
-        const sound = document.getElementById('pageSound');
-        sound.currentTime = 0;
-        sound.play();
-      }
-
-      // Fungsi untuk memperbarui posisi slider
-      function updateSliderPosition(page) {
-        const barWidth    = $('.navigation-bar').width();
-        const sliderWidth = slider.width();
-        const sliderPos   = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
-        slider.css('left', sliderPos + 'px');
-        pageNumber.text(`Halaman ${page}`);
-      }
-
-      // Teknik Slider Navigation
-      slider.on('mousedown touchstart', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const barWidth    = $('.navigation-bar').width();
-        const sliderWidth = slider.width();
-        const startX      = e.pageX || e.originalEvent.touches[0].pageX;
-        const startLeft   = parseFloat(slider.css('left'));
-
-        $(document).on('mousemove touchmove', function(e) {
-          const moveX = (e.pageX || e.originalEvent.touches[0].pageX) - startX;
-          let newLeft = startLeft + moveX;
-          
-          // Batasi gerakan slider
-          if (newLeft < 0) newLeft = 0;
-          if (newLeft > barWidth - sliderWidth) newLeft = barWidth - sliderWidth;
-          
-          slider.css('left', newLeft + 'px');
-          
-          // Hitung halaman berdasarkan posisi slider
-          const page = Math.round((newLeft / (barWidth - sliderWidth)) * (totalPages - 1)) + 1;
-          flipbook.turn('page', page);
-        });
-
-        $(document).on('mouseup touchend', function() {
-          $(document).off('mousemove touchmove');
-        });
-      });
-
-      // Teknik Geser halaman dengan jari (swipe)
-      let startX   = 0;
-      let isDragging = false;
-
-      flipbook.on('mousedown touchstart', function(e) {
-        // Jika event berasal dari slider, jangan proses swipe
-        if ($(e.target).closest('#slider').length) return;
-        startX = e.pageX || e.originalEvent.touches[0].pageX;
-        isDragging = true;
-      });
-
-      flipbook.on('mousemove touchmove', function(e) {
-        if (!isDragging) return;
-        const currentX = e.pageX || e.originalEvent.touches[0].pageX;
-        const deltaX   = currentX - startX;
-
-        // Threshold swipe: 60% dari lebar flipbook
-        const threshold = flipbook.width() * 0.6;
-
-        if (deltaX > threshold) {
-          flipbook.turn('previous');
-          isDragging = false;
-        } else if (deltaX < -threshold) {
-          flipbook.turn('next');
-          isDragging = false;
-        }
-      });
-
-      flipbook.on('mouseup touchend', function() {
-        isDragging = false;
-      });
-
-      // Inisialisasi posisi slider
+      // Inisialisasi posisi slider awal
       updateSliderPosition(1);
     });
+
+    // Fungsi untuk merender halaman PDF ke canvas
+    function renderPage(pageNum, canvas) {
+      pdfDoc.getPage(pageNum).then(function(page) {
+        const scale = 1.5; // Atur skala tampilan halaman PDF
+        const viewport = page.getViewport({ scale: scale });
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        page.render(renderContext);
+      });
+    }
+
+    // Fungsi untuk memainkan suara flip
+    function playSound() {
+      const sound = document.getElementById('pageSound');
+      sound.currentTime = 0;
+      sound.play();
+    }
+
+    // Fungsi untuk memperbarui posisi slider dan nomor halaman
+    function updateSliderPosition(page) {
+      const slider = $('#slider');
+      const pageNumber = $('#pageNumber');
+      const barWidth    = $('.navigation-bar').width();
+      const sliderWidth = slider.width();
+      // Menghitung posisi slider berdasarkan halaman aktif
+      const sliderPos = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
+      slider.css('left', sliderPos + 'px');
+      pageNumber.text(`Halaman ${page}`);
+    }
   </script>
 </body>
 </html>
