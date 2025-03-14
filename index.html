@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flipbook Ebook Bisnis</title>
+  <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+  <!-- Flipbook -->
+  <div id="flipbook">
+    <div class="page" data-page="ebook/ebook1.html"></div>
+    <div class="page" data-page="ebook/ebook2.html"></div>
+    <div class="page" data-page="ebook/ebook3.html"></div>
+    <div class="page" data-page="ebook/ebook4.html"></div>
+    <div class="page" data-page="ebook/ebook5.html"></div>
+  </div>
+
+  <!-- Navigasi -->
+  <div class="navigation-container">
+    <div class="navigation-bar">
+      <div class="slider" id="slider"></div>
+    </div>
+    <div class="page-number" id="pageNumber">Halaman 1</div>
+  </div>
+
+  <!-- Load jQuery dan Turn.js -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="javascript/turn.min.js"></script>
+  <!-- Efek Suara -->
+  <audio id="pageSound" src="sounds/page-flip.mp3"></audio>
+
+  <!-- Script Flipbook -->
+  <script>
+    $(document).ready(function() {
+      const flipbook   = $('#flipbook');
+      const slider     = $('#slider');
+      const pageNumber = $('#pageNumber');
+      const totalPages = $(".page").length;
+
+      // Inisialisasi Turn.js
+      flipbook.turn({
+        width: '90%',
+        height: '85vh',
+        autoCenter: true,
+        duration: 1200,
+        acceleration: true,
+        gradients: true,
+        display: 'single',
+        when: {
+          turning: function(e, page) {
+            updateSliderPosition(page);
+            playSound();
+            loadPageContent(page);
+          }
+        }
+      });
+
+      // Memuat halaman saat pertama kali dijalankan
+      loadPageContent(1);
+
+      // Fungsi untuk memutar suara
+      function playSound() {
+        const sound = document.getElementById('pageSound');
+        sound.currentTime = 0;
+        sound.play();
+      }
+
+      // Fungsi untuk memperbarui posisi slider
+      function updateSliderPosition(page) {
+        const barWidth    = $('.navigation-bar').width();
+        const sliderWidth = slider.width();
+        const sliderPos   = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
+        slider.css('left', sliderPos + 'px');
+        pageNumber.text(`Halaman ${page}`);
+      }
+
+      // Fungsi untuk memuat halaman dari file eksternal
+      function loadPageContent(page) {
+        const pageElement = $(`.page:nth-child(${page})`);
+        const pageUrl = pageElement.attr('data-page');
+
+        if (!pageElement.html()) {
+          pageElement.load(pageUrl);
+        }
+      }
+
+      // Inisialisasi posisi slider
+      updateSliderPosition(1);
+    });
+  </script>
+</body>
+</html>
