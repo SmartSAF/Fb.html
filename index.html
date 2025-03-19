@@ -1,120 +1,84 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flipbook PDF Interaktif</title>
+<script>
+  // Set worker PDF.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
   
-  <!-- CSS Flipbook -->
-  <link rel="stylesheet" href="style/style.css">
-  
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  
-  <!-- Turn.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/4.1.0/turn.min.js"></script>
+  const pdfUrl = "pdf/document.pdf"; // Pastikan path ini benar
+  let pdfDoc = null;
+  let totalPages = 0;
+  const flipbookContainer = document.getElementById("flipbook");
 
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-</head>
-<body>
-  <h1 style="text-align: center; color: white; background: orange; padding: 10px;">
-    Flipbook PDF Interaktif
-  </h1>
+  pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+    pdfDoc = pdf;
+    totalPages = pdf.numPages;
 
-  <!-- Container Flipbook -->
-  <div id="flipbook"></div>
+    let promises = [];
 
-  <!-- Navigasi -->
-  <div class="navigation-container">
-    <div class="navigation-bar">
-      <div class="slider" id="slider"></div>
-    </div>
-    <div class="page-number" id="pageNumber">Halaman 1</div>
-  </div>
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      let promise = new Promise((resolve) => {
+        const pageDiv = document.createElement("div");
+        pageDiv.className = "page";
 
-  <!-- Efek Suara -->
-  <audio id="pageSound" src="sounds/page-flip.mp3"></audio>
+        const canvas = document.createElement("canvas");
+        canvas.className = "pdf-page";
+        pageDiv.appendChild(canvas);
+        flipbookContainer.appendChild(pageDiv);
 
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+        renderPage(pageNum, canvas, resolve);
+      });
+      promises.push(promise);
+    }
 
-    const pdfUrl = "pdf/document.pdf";  // Ubah sesuai lokasi file PDF Anda
-    let pdfDoc = null;
-    let totalPages = 0;
-    const flipbookContainer = document.getElementById("flipbook");
+    // Tunggu sampai semua halaman dirender
+    Promise.all(promises).then(() => {
+      // Dapatkan ukuran container flipbook dalam piksel
+      const flipbookWidth = $("#flipbook").width();
+      const flipbookHeight = $("#flipbook").height();
 
-    pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-      pdfDoc = pdf;
-      totalPages = pdf.numPages;
-
-      let promises = [];
-
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        let promise = new Promise((resolve) => {
-          const pageDiv = document.createElement("div");
-          pageDiv.className = "page";
-
-          const canvas = document.createElement("canvas");
-          canvas.className = "pdf-page";
-          pageDiv.appendChild(canvas);
-          flipbookContainer.appendChild(pageDiv);
-
-          renderPage(pageNum, canvas, resolve);
-        });
-
-        promises.push(promise);
-      }
-
-      // Tunggu sampai semua halaman dirender sebelum menginisialisasi flipbook
-      Promise.all(promises).then(() => {
-        $("#flipbook").turn({
-          width: "90%",
-          height: "85vh",
-          autoCenter: true,
-          duration: 1200,
-          gradients: true,
-          display: "single",
-          when: {
-            turning: function (e, page) {
-              updateSliderPosition(page);
-              playSound();
-            }
+      // Inisialisasi turn.js dengan ukuran numerik
+      $("#flipbook").turn({
+        width: flipbookWidth,
+        height: flipbookHeight,
+        autoCenter: true,
+        duration: 1200,
+        gradients: true,
+        display: "single",
+        when: {
+          turning: function (e, page) {
+            updateSliderPosition(page);
+            playSound();
           }
-        });
-
-        updateSliderPosition(1);
+        }
       });
+
+      updateSliderPosition(1);
     });
+  });
 
-    function renderPage(pageNum, canvas, callback) {
-      pdfDoc.getPage(pageNum).then(function (page) {
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale });
-        const context = canvas.getContext("2d");
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+  function renderPage(pageNum, canvas, callback) {
+    pdfDoc.getPage(pageNum).then(function (page) {
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+      const context = canvas.getContext("2d");
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      const renderContext = { canvasContext: context, viewport: viewport };
+      page.render(renderContext).promise.then(callback);
+    });
+  }
 
-        const renderContext = { canvasContext: context, viewport: viewport };
-        page.render(renderContext).promise.then(callback);
-      });
-    }
+  function playSound() {
+    const sound = document.getElementById("pageSound");
+    sound.currentTime = 0;
+    sound.play();
+  }
 
-    function playSound() {
-      const sound = document.getElementById("pageSound");
-      sound.currentTime = 0;
-      sound.play();
-    }
-
-    function updateSliderPosition(page) {
-      const slider = $("#slider");
-      const pageNumber = $("#pageNumber");
-      const barWidth = $(".navigation-bar").width();
-      const sliderWidth = slider.width();
-      const sliderPos = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
-      slider.css("left", sliderPos + "px");
-      pageNumber.text(`Halaman ${page}`);
-    }
-  </script>
-</body>
-</html>
+  function updateSliderPosition(page) {
+    const slider = $("#slider");
+    const pageNumber = $("#pageNumber");
+    const barWidth = $(".navigation-bar").width();
+    const sliderWidth = slider.width();
+    const sliderPos = ((page - 1) / (totalPages - 1)) * (barWidth - sliderWidth);
+    slider.css("left", sliderPos + "px");
+    pageNumber.text(`Halaman ${page}`);
+  }
+</script>
